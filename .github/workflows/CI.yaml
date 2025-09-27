@@ -1,4 +1,4 @@
-name: go-libp2p Workshop CII
+name: go-libp2p Workshop CI
 
 on:
   push:
