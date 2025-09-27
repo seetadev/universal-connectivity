@@ -2,9 +2,9 @@ name: go-libp2p Workshop CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ Barebones-CI/CD, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ Barebones-CI/CD, develop ]
 
 env:
   GO_VERSION: '1.21'
