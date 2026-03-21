@@ -27,7 +27,7 @@ from libp2p import new_host
 from libp2p.crypto.ed25519 import create_new_key_pair
 from libp2p.pubsub.gossipsub import GossipSub
 from libp2p.pubsub.pubsub import Pubsub
-from libp2p.tools.async_service.trio_service import background_trio_service
+from libp2p.tools.anyio_service import background_trio_service
 from libp2p.peer.peerinfo import info_from_p2p_addr
 from libp2p.identity.identify.identify import identify_handler_for, parse_identify_response, ID as IDENTIFY_PROTOCOL_ID
 from libp2p.utils.varint import read_length_prefixed_protobuf
@@ -43,7 +43,6 @@ from libp2p.host.exceptions import (
 from chatroom import ChatRoom, ChatMessage
 from libp2p.bitswap import BitswapClient, MemoryBlockStore
 from libp2p.bitswap.dag import MerkleDag
-from libp2p.bitswap.cid import cid_to_string
 from libp2p.network.config import ConnectionConfig
 
 # File message prefix for pubsub
