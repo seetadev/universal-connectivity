@@ -16,6 +16,7 @@ dependencies = [
     "kivymd>=1.2.0",
     "python-dotenv>=1.2.2",
     "groq>=1.0.0",
+    "tornado>=6.5.5"
 ]
 
 [project.scripts]
