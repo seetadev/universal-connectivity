@@ -35,7 +35,7 @@ python main.py --api-routes
 
 ## Response Envelope
 
-Every REST endpoint returns the same JSON envelope:
+Most REST endpoints return the same JSON envelope:
 
 **Success:**
 ```json
@@ -46,6 +46,8 @@ Every REST endpoint returns the same JSON envelope:
   "timestamp": 1772532115.19
 }
 ```
+
+> **Exception:** `POST /api/v1/ask` uses a dedicated RAG response shape and does not use the `data/error/timestamp` envelope from `BaseHandler`.
 
 **Error:**
 ```json
@@ -71,6 +73,8 @@ Every REST endpoint returns the same JSON envelope:
 | `400` | Bad request — missing or invalid field |
 | `404` | Resource not found |
 | `409` | Conflict — e.g. already subscribed to topic |
+| `500` | Internal server error |
+| `502` | Upstream/model backend error |
 | `503` | Service not ready yet or queue unavailable |
 
 ### CORS
@@ -127,6 +131,7 @@ Access-Control-Allow-Headers: Content-Type, X-API-Key
 | GET | [`/api/v1/service/config`](#get-apiv1serviceconfig) | Service configuration |
 | POST | [`/api/v1/service/stop`](#post-apiv1servicestop) | Graceful shutdown |
 | POST | [`/api/v1/service/bootstrap`](#post-apiv1servicebootstrap) | Re-trigger bootstrap |
+| POST | [`/api/v1/ask`](#post-apiv1ask) | RAG assistant for py-libp2p/spec questions |
 | WS | [`/ws/messages`](#ws-wsmessages) | Real-time message stream |
 | WS | [`/ws/system`](#ws-wssystem) | Real-time system events |
 | WS | [`/ws/peers`](#ws-wspeers) | Real-time peer list updates |
@@ -1298,6 +1303,81 @@ curl -X POST http://localhost:8765/api/v1/service/bootstrap
 
 ---
 
+## RAG Assistant
+
+### POST /api/v1/ask
+
+Asks the py-libp2p assistant a grounded question using the local vector store + Groq model backend.
+
+> **Response shape note:** this endpoint does **not** return the standard `BaseHandler` envelope.
+
+**Request:**
+```bash
+curl -X POST http://localhost:8765/api/v1/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How does GossipSub mesh maintenance work?"}'
+```
+
+**Body:**
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `question` | string | ✅ | Natural-language question about py-libp2p/libp2p specs |
+
+**Success `200`:**
+```json
+{
+  "success": true,
+  "answer": "...grounded answer...",
+  "sources": [
+    "py-libp2p/libp2p/pubsub/gossipsub.py",
+    "specs/pubsub/gossipsub/README.md"
+  ]
+}
+```
+
+**No relevant chunks found (`200`):**
+```json
+{
+  "success": true,
+  "answer": "No relevant context found in the knowledge base.",
+  "sources": []
+}
+```
+
+**Error `400` (bad/missing `question`):**
+```json
+{
+  "success": false,
+  "error": "'question' cannot be empty."
+}
+```
+
+**Error `503` (vector store unavailable):**
+```json
+{
+  "success": false,
+  "error": "RAG assistant is not available. Vector store not loaded."
+}
+```
+
+**Error `500` (vector search failure):**
+```json
+{
+  "success": false,
+  "error": "Vector search failed."
+}
+```
+
+**Error `502` (LLM backend failure):**
+```json
+{
+  "success": false,
+  "error": "LLM backend error: ..."
+}
+```
+
+---
+
 ## WebSocket APIs
 
 WebSocket endpoints provide **real-time, push-based** data delivery. Connect once and receive a continuous stream of events — no polling needed.
@@ -1372,6 +1452,16 @@ Optionally send JSON to filter messages by topic:
 ```
 ```json
 { "action": "unfilter" }
+```
+
+Server acknowledgements for these commands:
+
+```json
+{ "event": "filter_set", "topic": "my-channel" }
+```
+
+```json
+{ "event": "filter_cleared" }
 ```
 
 ---
