@@ -1,6 +1,6 @@
 # py-peer 🌐
 
-A Python implementation of the Universal Connectivity peer-to-peer chat application using libp2p networking with multiple UI options including a modern mobile-friendly interface.
+A Python implementation of the Universal Connectivity peer-to-peer chat application using libp2p networking with multiple UI options, a Tornado API layer, and a React web frontend.
 
 This is the Python implementation of the [Universal Connectivity][UNIV_CONN] app showcasing the [Gossipsub][GOSSIPSUB] features of the core libp2p protocol as found in the [py-libp2p][PYLIBP2P] Python libp2p implementation. The implementation currently uses TCP.
 
@@ -21,7 +21,9 @@ This is the Python implementation of the [Universal Connectivity][UNIV_CONN] app
 
 ## 🚀 Overview
 
-py-peer is a decentralized chat application that enables peer-to-peer communication without requiring central servers. Built on libp2p, it provides secure, direct communication between participants using modern networking protocols. It offers three distinct UI modes to suit different use cases: a mobile-friendly Kivy interface, a terminal-based Textual TUI, and a simple CLI mode.
+py-peer is a decentralized chat application that enables peer-to-peer communication without requiring central servers. Built on libp2p, it provides secure, direct communication between participants using modern networking protocols. It offers multiple interaction modes: a mobile-friendly Kivy interface, a terminal-based Textual TUI, a simple CLI mode, and a React frontend powered by a Tornado REST + WebSocket API.
+
+Kivy, Textual, and CLI modes run with direct in-process access to the HeadlessService. The React frontend is decoupled and communicates with HeadlessService through Tornado REST and WebSocket endpoints.
 
 ## 📸 Screenshots
 
@@ -41,6 +43,8 @@ py-peer is a decentralized chat application that enables peer-to-peer communicat
 - **[Trio](https://trio.readthedocs.io/)** - Async/await framework for Python
 - **[KivyMD](https://kivymd.readthedocs.io/)** - Material Design mobile UI framework
 - **[Textual](https://textual.textualize.io/)** - Modern Terminal User Interface framework
+- **[Tornado](https://www.tornadoweb.org/)** - REST and WebSocket API server
+- **[React + Vite](https://vitejs.dev/)** - Modern web frontend for py-peer
 - **[GossipSub](https://docs.libp2p.io/concepts/pubsub/overview/)** - Pub/sub messaging protocol
 
 ## ✨ Features
@@ -52,6 +56,8 @@ py-peer is a decentralized chat application that enables peer-to-peer communicat
 - **Peer Discovery** - Automatic discovery of other peers in the network
 - **Cross-Platform** - Works on Linux, macOS, Windows, and mobile platforms
 - **Secure Communication** - Built-in encryption and peer authentication
+- **REST + WebSocket API** - Full Tornado API for programmatic control and real-time streams
+- **Web Frontend** - React dashboard for chat, topic management, and peer operations
 
 ### Advanced Features (NEW!)
 - **Topic-Based Conversations** - Subscribe to and chat in multiple topics simultaneously
@@ -63,6 +69,8 @@ py-peer is a decentralized chat application that enables peer-to-peer communicat
 - **Message Filtering** - View messages only for the selected topic
 - **Custom Topics** - Use custom topic names via command line or UI
 - **Persistent Connections** - Automatic peer connection maintenance
+- **File Sharing API** - Share/download files via Bitswap/MerkleDag API endpoints
+- **RAG Assistant** - Ask py-libp2p questions through `/api/v1/ask` powered by vector search + LLM
 
 ### UI-Specific Features
 
@@ -85,47 +93,62 @@ py-peer is a decentralized chat application that enables peer-to-peer communicat
 - Command history
 - Minimal resource usage
 
+#### React Frontend Features
+- Browser-based chat UI with live updates
+- Connection panel for peer connect + topic subscribe
+- Topic sidebar with unread counts
+- WebSocket-backed real-time messages and peer updates
+- Built-in py-libp2p assistant widget (RAG)
+
 ## 🏗️ Architecture
 
+**Access model:**
+- Kivy UI, Textual TUI, and CLI mode access HeadlessService directly in-process
+- React frontend accesses HeadlessService indirectly via Tornado API (`/api/v1/*`) and WebSockets (`/ws/*`)
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     UI Layer (Choose One)                   │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│   Kivy UI       │  Textual TUI    │   CLI Mode              │
-│                 │                 │                          │
-│ • Topics List   │ • Chat Window   │ • Simple Input/Output   │
-│ • Chat Screens  │ • Peers Panel   │ • Commands              │
-│ • Copy Features │ • System Log    │ • Direct Messaging      │
-│ • Peer Connect  │ • Commands      │                         │
-└────────┬────────┴────────┬────────┴────────┬────────────────┘
-         │                 │                 │
-         └─────────────────┼─────────────────┘
-                           │
-                  ┌────────▼────────┐
-                  │ Headless Service │
-                  │                  │
-                  │ • Message Queue  │
-                  │ • Topic Storage  │
-                  │ • Event Loop     │
-                  │ • State Mgmt     │
-                  └────────┬─────────┘
-                           │
-                  ┌────────▼─────────┐
-                  │   Chat Room      │
-                  │                  │
-                  │ • libp2p Host    │
-                  │ • PubSub/GossipSub│
-                  │ • DHT            │
-                  │ • Topic Handlers │
-                  └────────┬─────────┘
-                           │
-                  ┌────────▼─────────┐
-                  │   P2P Network    │
-                  │                  │
-                  │ • Peer Discovery │
-                  │ • Message Relay  │
-                  │ • Topic Routing  │
-                  └──────────────────┘
+┌────────────────────────────────────┐      ┌──────────────────────────────┐
+│ Local UI Path (Choose One)         │      │ Web Client Path              │
+├────────────────────────────────────┤      ├──────────────────────────────┤
+│ Kivy UI / Textual TUI / CLI        │      │ React Frontend (Vite + TS)   │
+│                                    │      │ • /api/v1 calls              │
+│ • In-process access                │      │ • /ws streams                │
+│ • No HTTP hop required             │      │ • RAG assistant UI           │
+└───────────────────┬────────────────┘      └──────────────┬───────────────┘
+                    │                                       │
+                    │ direct in-process                     │ HTTP + WS
+                    │                                       │
+                    │                              ┌────────▼────────┐
+                    │                              │   Tornado API    │
+                    │                              │ • REST endpoints │
+                    │                              │ • WebSockets     │
+                    │                              │ • CORS + JSON    │
+                    │                              └────────┬─────────┘
+                    │                                       │
+                    └───────────────────────┬───────────────┘
+                                            │
+                                  ┌─────────▼─────────┐
+                                  │  Headless Service  │
+                                  │ • Message Queue    │
+                                  │ • Topic Storage    │
+                                  │ • Event Loop       │
+                                  │ • State Mgmt       │
+                                  └─────────┬─────────┘
+                                            │
+                                  ┌─────────▼─────────┐
+                                  │     Chat Room     │
+                                  │ • libp2p Host     │
+                                  │ • PubSub/GossipSub│
+                                  │ • DHT             │
+                                  │ • Topic Handlers  │
+                                  └─────────┬─────────┘
+                                            │
+                                  ┌─────────▼─────────┐
+                                  │    P2P Network    │
+                                  │ • Peer Discovery  │
+                                  │ • Message Relay   │
+                                  │ • Topic Routing   │
+                                  └───────────────────┘
 ```
 
 ### Components
@@ -135,6 +158,10 @@ py-peer is a decentralized chat application that enables peer-to-peer communicat
 - **ui.py** - Textual-based terminal user interface
 - **headless.py** - Background service managing libp2p operations
 - **chatroom.py** - Chat room logic, topic management, and message handling
+- **tornado_server.py** - Tornado REST + WebSocket server bootstrap and route wiring
+- **api/** - Versioned API handlers (node, peers, topics, messages, files, dht, pubsub, identity, service, websocket)
+- **rag_handler.py** - Retrieval-augmented QA endpoint (`/api/v1/ask`)
+- **py-peer-frontend/** - React + Vite web UI consuming the API
 
 ### Message Flow
 
@@ -158,6 +185,8 @@ User Input → UI Thread → Queue → Async Thread (Trio)
 - **uv** (recommended) or pip package manager
 - Network connectivity for peer-to-peer communication
 - For Kivy UI: Additional system dependencies (see Installation)
+- For React frontend: **Node.js 18+** and npm
+- For RAG endpoint (`/api/v1/ask`): Groq API key + vector store build dependencies
 
 ## 🛠️ Installation
 
@@ -250,6 +279,12 @@ python main.py --nick Charlie
 
 # Headless mode (no UI)
 python main.py --headless --nick Dave
+
+# Tornado API mode (REST + WebSocket)
+python main.py --api --nick Eve --api-port 8765
+
+# Print all API routes and exit
+python main.py --api-routes
 ```
 
 ### Command Line Options
@@ -266,6 +301,9 @@ python main.py --headless --nick Dave
 | `-s, --seed SEED` | Seed for deterministic peer ID | `-s 12345` |
 | `-v, --verbose` | Enable debug logging | `-v` |
 | `--no-strict-signing` | Allow unsigned messages | `--no-strict-signing` |
+| `--api` | Start Tornado REST + WebSocket API server | `--api` |
+| `--api-port PORT` | Set Tornado API port | `--api-port 8765` |
+| `--api-routes` | Print all API routes and exit | `--api-routes` |
 
 ### Connecting Peers
 
@@ -282,6 +320,8 @@ python main.py --kivy --nick Bob --connect /ip4/192.168.1.100/tcp/9095/p2p/QmXXX
 ```
 
 ## 🖥️ User Interfaces
+
+Kivy, Textual, and CLI run against the local in-process HeadlessService. React frontend clients connect over HTTP/WebSocket through the Tornado API layer.
 
 ### 1. Kivy UI (Recommended for Mobile/Desktop)
 
@@ -339,6 +379,28 @@ Chat Screen
 **Usage:**
 Just type messages and press Enter. Use `/quit` to exit.
 
+### 4. React Web Frontend
+
+The React frontend is located in `py-peer/py-peer-frontend` and uses the Tornado API.
+
+**Start backend API:**
+```bash
+python main.py --api --nick Alice --api-port 8765
+```
+
+**Start frontend (new terminal):**
+```bash
+cd py-peer/py-peer-frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+**Production/remote backend:**
+- Set `VITE_API_URL` in `py-peer/py-peer-frontend/.env.local`
+- Example: `VITE_API_URL=https://your-backend.example.com`
+
 ## ⚙️ Configuration
 
 ### Custom Topics
@@ -371,6 +433,36 @@ Messages are stored per-topic with read/unread tracking:
 - Opening a topic marks messages as read
 - Messages persist during session only
 
+### Tornado API Configuration
+
+The API runs in headless + server mode and exposes REST + WebSocket endpoints.
+
+```bash
+python main.py --api --nick MyNode --api-port 8765
+```
+
+- Base URL: `http://localhost:8765/api/v1`
+- Route listing: `python main.py --api-routes`
+- Full endpoint docs: see **`API_REFERENCE.md`**
+
+### RAG Assistant Configuration
+
+The `/api/v1/ask` endpoint is available when vector store + LLM dependencies are configured.
+
+1. Install additional packages:
+```bash
+pip install chromadb langchain langchain-community langchain-huggingface sentence-transformers
+```
+2. Build vector store:
+```bash
+cd llm/codes
+python build_vectorstore.py
+```
+3. Set your Groq API key in environment:
+```bash
+export GROQ_API_KEY=your_key_here
+```
+
 ### Log Files
 
 - **`system_messages.txt`** - System events and connection logs
@@ -388,6 +480,11 @@ py-peer/
 ├── ui.py               # Textual TUI implementation
 ├── headless.py         # Background service & state management
 ├── chatroom.py         # Chat room logic & topic handling
+├── tornado_server.py    # REST + WebSocket server
+├── rag_handler.py       # RAG assistant endpoint
+├── API_REFERENCE.md     # Full API docs
+├── api/                 # Tornado API handlers (v1)
+├── py-peer-frontend/    # React + Vite frontend
 ├── pyproject.toml      # Project configuration & dependencies
 ├── uv.lock            # Dependency lock file
 ├── system_messages.txt # System logs
@@ -413,6 +510,16 @@ py-peer/
 - Unified message handler for all topics
 - Message validation & signing
 
+**tornado_server.py + api/**
+- REST endpoints for node, peers, topics, messages, files, DHT, pubsub, identity, service
+- WebSocket streams for messages, system events, peer updates, mesh updates
+- Shared JSON response envelope + readiness guards
+
+**rag_handler.py:**
+- `POST /api/v1/ask` retrieval-augmented question answering
+- Loads Chroma vector store at startup
+- Uses Groq LLM backend for grounded answers with source attribution
+
 ### Running from Source
 
 ```bash
@@ -424,6 +531,12 @@ python main.py --kivy --nick Alice --topic dev-chat
 
 # Run with specific port
 python main.py --kivy --nick Bob --port 8080
+
+# Run REST + WebSocket API
+python main.py --api --nick ApiNode --api-port 8765
+
+# Run React frontend
+cd py-peer/py-peer-frontend && npm run dev
 ```
 
 ### Code Style
@@ -470,6 +583,21 @@ pip install --force-reinstall kivy kivymd
 - Ensure clipboard permissions (mobile)
 - Try restarting the app
 - Check system logs for errors
+
+**6. Tornado API Not Reachable**
+- Ensure backend was started with `--api`
+- Check API port (default `8765`)
+- Run `python main.py --api-routes` to verify route setup
+
+**7. React Frontend Shows "Cannot reach py-peer API"**
+- Confirm backend is running: `python main.py --api --nick YourName`
+- For local dev, keep `VITE_API_URL` empty or set to `http://localhost:8765`
+- Restart Vite after `.env.local` changes
+
+**8. RAG Assistant Unavailable (`/api/v1/ask` returns 503)**
+- Build vector store via `llm/codes/build_vectorstore.py`
+- Install RAG dependencies (Chroma/LangChain/SentenceTransformers)
+- Set `GROQ_API_KEY` environment variable
 
 ### Debug Mode
 
@@ -529,6 +657,26 @@ python main.py --kivy --nick Alice
 python main.py --kivy --nick Alice --topic my-company-chat
 ```
 
+### API + Frontend Pairing
+
+Run backend and frontend together:
+
+```bash
+# Terminal 1 (backend)
+python main.py --api --nick BackendNode --api-port 8765
+
+# Terminal 2 (frontend)
+cd py-peer/py-peer-frontend
+npm run dev
+```
+
+Use REST directly:
+
+```bash
+curl http://localhost:8765/api/v1/node/info
+curl http://localhost:8765/api/v1/topics
+```
+
 ### Peer Groups
 
 Create private peer groups by using unique topic names:
@@ -583,7 +731,7 @@ For support and questions:
 ## 🗺️ Roadmap
 
 - [ ] Message persistence across sessions
-- [ ] File sharing support
+- [x] File sharing support (REST endpoints: share/download/upload)
 - [ ] Voice/video chat
 - [ ] End-to-end encryption
 - [ ] Mobile app packaging (Android/iOS)
