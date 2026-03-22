@@ -58,7 +58,7 @@ export default function LibP2PAssistant() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-5 right-5 sm:right-8 z-50 flex flex-col items-end gap-2">
       {/* ── Chat panel ──────────────────────────────────────────────── */}
       {open && (
         <div className="w-80 sm:w-96 flex flex-col rounded-xl border border-gray-200 bg-white shadow-2xl overflow-hidden"
@@ -148,10 +148,10 @@ export default function LibP2PAssistant() {
       {/* ── Toggle button ────────────────────────────────────────────── */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-700 transition"
+        className="flex items-center justify-center rounded-full bg-indigo-600 p-3.5 text-white shadow-xl hover:bg-indigo-700 hover:scale-105 transition-all"
+        title={open ? "Close Assistant" : "Ask py-libp2p"}
       >
-        <SparklesIcon className="h-4 w-4" />
-        {open ? 'Close' : 'Ask py-libp2p'}
+        {open ? <XMarkIcon className="h-6 w-6" /> : <SparklesIcon className="h-6 w-6" />}
       </button>
     </div>
   )
