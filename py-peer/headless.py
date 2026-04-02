@@ -219,9 +219,8 @@ class HeadlessService:
     
     async def _run_service(self):
         """Run the main service loop."""
-        seed_str = self.seed
-        secret = hashlib.sha256(seed_str.encode()).digest()
-        logger.info(f"Using deterministic Ed25519 key derived from seed='{seed_str}'")
+        secret = hashlib.sha256(self.seed.encode()).digest()
+        logger.info(f"Using deterministic Ed25519 key derived from seed='{self.seed}'")
         key_pair = create_new_key_pair(seed=secret)
         
         # Create listen address
