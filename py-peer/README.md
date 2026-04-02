@@ -451,7 +451,7 @@ The `/api/v1/ask` endpoint is available when vector store + LLM dependencies are
 
 1. Install additional packages:
 ```bash
-pip install chromadb langchain langchain-community langchain-huggingface sentence-transformers
+pip install chromadb langchain langchain-community langchain-huggingface sentence-transformers langchain-chroma
 ```
 2. Build vector store:
 ```bash
