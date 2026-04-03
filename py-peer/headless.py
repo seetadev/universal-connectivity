@@ -61,9 +61,6 @@ DEFAULT_PORT = 9095
 
 # Bootstrap nodes for peer discovery
 BOOTSTRAP_PEERS = [
-    "/ip4/139.178.65.157/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-    "/ip4/139.178.91.71/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-    "/ip4/145.40.118.135/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
     "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
     "/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa", 
     "/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zp7ykQCj2gRNdrFeqQ1vG13rMb4sPS",
@@ -82,45 +79,6 @@ def filter_compatible_peer_info(peer_info) -> bool:
         if "/tcp/" in addr_str and "/ip4/" in addr_str and "/quic" not in addr_str:
             return True
     return False
-
-# async def maintain_connections(host) -> None:
-#     """Maintain connections to ensure the host remains connected to healthy peers."""
-#     while True:
-#         try:
-#             connected_peers = host.get_connected_peers()
-#             list_peers = host.get_peerstore().peers_with_addrs()
-
-#             if len(connected_peers) < 20:
-#                 logger.debug("Reconnecting to maintain peer connections...")
-
-#                 # Find compatible peers
-#                 compatible_peers = []
-#                 for peer_id in list_peers:
-#                     try:
-#                         peer_info = host.get_peerstore().peer_info(peer_id)
-#                         if filter_compatible_peer_info(peer_info):
-#                             compatible_peers.append(peer_id)
-#                     except Exception:
-#                         continue
-
-#                 # Connect to random subset of compatible peers
-#                 if compatible_peers:
-#                     random_peers = random.sample(
-#                         compatible_peers, min(50, len(compatible_peers))
-#                     )
-#                     for peer_id in random_peers:
-#                         if peer_id not in connected_peers:
-#                             try:
-#                                 with trio.move_on_after(5):
-#                                     peer_info = host.get_peerstore().peer_info(peer_id)
-#                                     await host.connect(peer_info)
-#                                     logger.debug(f"Connected to peer: {peer_id}")
-#                             except Exception as e:
-#                                 logger.debug(f"Failed to connect to {peer_id}: {e}")
-
-#             await trio.sleep(15)
-#         except Exception as e:
-#             logger.error(f"Error maintaining connections: {e}")
 
 
 class HeadlessService:
@@ -184,10 +142,10 @@ class HeadlessService:
     
     async def monitor_peers(self):
         while True:
-            logger.info(f"Connected peers are: len{self.host.get_connected_peers()}")
-            logger.info(f"peers in peer store are: len{self.host.get_peerstore().peers_with_addrs()}")
-            logger.info(f"peers in routing table are: len{self.dht.routing_table.get_peer_ids()}")
-            logger.info(f"peers in pubsub are: {(self.pubsub.peers.keys())}")
+            logger.info(f"Connected peers are: {len(self.host.get_connected_peers())}")
+            logger.info(f"Peers in peer store are: {len(self.host.get_peerstore().peers_with_addrs())}")
+            logger.info(f"Peers in routing table are: {len(self.dht.routing_table.get_peer_ids())}")
+            logger.info(f"Peers in pubsub are: {len(self.pubsub.peers.keys())}")
             await trio.sleep(5)
 
     async def start(self):
@@ -231,7 +189,7 @@ class HeadlessService:
         low_watermark=12,
         high_watermark=40,
         max_connections=50,
-        auto_connect_interval=2.0,  # Check every 5 seconds
+        auto_connect_interval=5.0,  # Check every 5 seconds
         )
         
         # Create libp2p host WITHOUT bootstrap nodes initially
@@ -334,7 +292,7 @@ class HeadlessService:
                                 # nursery.start_soon(maintain_connections, self.host)
 
             except (MultiselectClientError, StreamFailure) as e:
-                logger.log(f"The protocol negotitaion failed: {e}")
+                logger.error(f"The protocol negotiation failed: {e}")
                 pass
     
     async def _setup_connections(self):
