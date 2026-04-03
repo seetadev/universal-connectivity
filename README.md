@@ -89,7 +89,34 @@ go run .
 Make sure you have the [uv package manager](https://github.com/astral-sh/uv)
 installed first. Follow the instructions on their Github to install it.
 
-```
+### 1. Create a virtual environment
+
+Create and activate a virtual environment for the Python peer:
+
+```bash
 cd py-peer
-uv run hello.py
+uv venv
+source .venv/bin/activate
+```
+
+### 2. Install dependencies
+
+Install the Python peer dependencies:
+
+```bash
+uv pip install -e .
+```
+
+### 3. Start the Python peer
+
+Start the peer:
+
+```bash
+python main.py
+```
+
+If you want a specific mode, you can pass flags such as `--ui`, `--kivy`, or `--api`. For example:
+
+```bash
+python main.py --ui
 ```
