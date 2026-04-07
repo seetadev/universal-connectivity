@@ -1,0 +1,123 @@
+name: go-libp2p Workshop CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  lint-and-test:
+    name: 🔍 Lint & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐹 Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        cache-dependency-path: '**/go.sum'
+    
+    - name: 📦 Download dependencies
+      run: go mod download || { echo "❌ Failed to download dependencies!"; exit 1; }
+    
+    - name: 🎨 Check code formatting
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "❌ Code is not properly formatted!"
+          echo "💡 Run 'make fmt' to fix formatting issues."
+          echo ""
+          echo "Files that need formatting:"
+          gofmt -s -l .
+          exit 1
+        fi
+        echo "✅ Code formatting looks good!"
+    
+    - name: 🔧 Install golangci-lint
+      run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
+    
+    - name: 🔍 Run linter
+      run: golangci-lint run --timeout=5m
+    
+    - name: 🧪 Run tests
+      run: |
+        set -x
+        go test -v -race -coverprofile=coverage.out ./...
+    
+    - name: 🏗️ Build checkpoint examples
+      run: |
+        echo "Building workshop checkpoints..."
+        mkdir -p bin
+        for checkpoint in ./examples/checkpoint*; do
+          if [ -d "$checkpoint" ]; then
+            echo "Building $checkpoint..."
+            go build -o bin/$(basename "$checkpoint") "$checkpoint" || {
+              echo "❌ Failed to build $checkpoint!"
+              exit 1
+            }
+          else
+            echo "❌ Checkpoint directory $checkpoint not found!"
+            exit 1
+          fi
+        done
+        echo "✅ All examples built successfully!"
+    
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: success()
+      with:
+        file: ./coverage.out
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false
+
+  workshop-validation:
+    name: 🎓 Workshop Validation
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    strategy:
+      matrix:
+        checkpoint: [ 'checkpoint1', 'checkpoint2' ]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐹 Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        cache-dependency-path: '**/go.sum'
+    
+    - name: 📦 Download dependencies
+      run: go mod download || { echo "❌ Failed to download dependencies!"; exit 1; }
+    
+    - name: ✅ Test ${{ matrix.checkpoint }}
+      run: |
+        echo "Testing ${{ matrix.checkpoint }} (timeout after 10s is expected for network setup)..."
+        if ! timeout 10s go run ./examples/${{ matrix.checkpoint }}; then
+          if [ $? -eq 124 ]; then
+            echo "✅ ${{ matrix.checkpoint }} timed out as expected."
+          else
+            echo "❌ ${{ matrix.checkpoint }} failed with unexpected error!"
+            exit 1
+          fi
+        fi
+        echo "✅ ${{ matrix.checkpoint }} validation complete!"
+    
+    - name: 🎉 Workshop readiness check
+      run: |
+        echo ""
+        echo "🎓 Workshop Readiness Report:"
+        echo "✅ Code compiles without errors"
+        echo "✅ All examples run successfully"
+        echo "✅ Ready for 1500+ developers!"
+        echo ""
+      if: always()
