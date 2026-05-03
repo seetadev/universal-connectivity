@@ -413,6 +413,5 @@ func getResourceManager() network.ResourceManager {
 	if err != nil {
 		panic(err)
 	}
-
-	return resourceMaanger
+	return rcmgr
 }
